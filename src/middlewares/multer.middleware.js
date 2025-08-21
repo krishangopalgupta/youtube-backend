@@ -12,7 +12,7 @@ const storage = multer.diskStorage({
     },
 });
 
-console.log(`this is storage in multer.middleware.js, ${storage}`);
-console.log(`this is storage filename in multer.middleware.js, ${storage.filename}`);
+// console.log(`this is storage in multer.middleware.js, ${storage}`);
+// console.log(`this is storage filename in multer.middleware.js, ${storage.filename}`);
 
 export const upload = multer({storage});
