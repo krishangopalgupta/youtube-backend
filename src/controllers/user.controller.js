@@ -9,20 +9,23 @@ const generateAccessAndRefreshToken = async (userId) => {
     const user = await User.findById(userId);
     const accessToken = user.generateAccessToken();
     const refreshToken = user.generateRefreshToken();
-
+    
     // User is your Mongoose model (something like const User = mongoose.model("User", userSchema);).
     // The result of .findOne() is a Mongoose Document (an instance of that model).
     // That user object is not just plain JSON — it’s a document object with:
     // All the fields from your schema (email, userName, password, etc.)
     // Plus any methods you defined on the schema.
-
+    
     // User.findById gives you a document (not a plain object).
     // That document inherits from the userSchema prototype.
     // Since you defined generateAccessToken on the schema’s .methods, it’s available on every document instance.
     // Inside the method, this refers to the document itself (so you can access this._id, this.email, etc.).
     user.accessToken = accessToken;
     user.refreshToken = refreshToken;
-
+    
+    // console.log(user)
+    // console.log("this is user's token", user.accessToken);
+    // console.log("this is user's token", user.refreshToken);
     user.save({saveWithoutValidation: false});
     return {accessToken, refreshToken};
 };
@@ -137,13 +140,11 @@ const loginUser = asyncHandler(async (req, res) => {
         user._id
     );
 
-    const trash = await User.findById(user._id);
-    console.log(trash);
-
     const loggedInUser = await User.findById(user._id).select(
         '-password -refreshToken'
     );
 
+    
     const options = {
         httpOnly: true,
         secure: true,
@@ -170,6 +171,7 @@ const loginUser = asyncHandler(async (req, res) => {
 const logoutUser = asyncHandler(async (req, res) => {
     
     // First method
+    console.log('this is req from auth.controller.js', req);
     await User.findByIdAndUpdate(req.user._id, {
         $set: {
             refreshToken: undefined,
