@@ -4,6 +4,29 @@ import {User} from '../models/user.model.js';
 import {uploadOnCloudinary} from '../utils/cloudinary.js';
 import {apiResponse} from '../utils/apiResponse.js';
 
+// We will use it many times thats why we are using it as a saperate method
+const generateAccessAndRefreshToken = async (userId) => {
+    const user = await User.findById(userId);
+    const accessToken = user.generateAccessToken();
+    const refreshToken = user.generateRefreshToken();
+
+    // User is your Mongoose model (something like const User = mongoose.model("User", userSchema);).
+    // The result of .findOne() is a Mongoose Document (an instance of that model).
+    // That user object is not just plain JSON — it’s a document object with:
+    // All the fields from your schema (email, userName, password, etc.)
+    // Plus any methods you defined on the schema.
+
+    // User.findById gives you a document (not a plain object).
+    // That document inherits from the userSchema prototype.
+    // Since you defined generateAccessToken on the schema’s .methods, it’s available on every document instance.
+    // Inside the method, this refers to the document itself (so you can access this._id, this.email, etc.).
+    user.accessToken = accessToken;
+    user.refreshToken = refreshToken;
+
+    user.save({saveWithoutValidation: false});
+    return {accessToken, refreshToken};
+};
+
 const registerUser = asyncHandler(async (req, res, next) => {
     // get user details
     // validation - not empty
@@ -80,5 +103,94 @@ const registerUser = asyncHandler(async (req, res, next) => {
         );
 });
 
+const loginUser = asyncHandler(async (req, res) => {
+    // req.body -> data
+    // userName or email, exist or not?
+    // find user
+    // password check
+    // if exist
+    // create refresh token and access token
+    // send cookies
+    // redirect to page
+    // else
+    // Throw error message
 
-export {registerUser};
+    const {email, userName, password} = req.body;
+    if (!email && !userName) {
+        throw new apiError(404, 'Username or email is required');
+    }
+
+    const user = await User.findOne({
+        $or: [{email}, {userName}],
+    });
+
+    if (!user) {
+        throw new apiError(404, 'user is not exist');
+    }
+    
+    const isPasswordValid = await user.isPasswordCorrect(password);
+    if (!isPasswordValid) {
+        throw new apiError(401, 'Invalid user Credential');
+    }
+
+    const {accessToken, refreshToken} = await generateAccessAndRefreshToken(
+        user._id
+    );
+
+    const trash = await User.findById(user._id);
+    console.log(trash);
+
+    const loggedInUser = await User.findById(user._id).select(
+        '-password -refreshToken'
+    );
+
+    const options = {
+        httpOnly: true,
+        secure: true,
+    };
+
+    return res
+        .status(200)
+        .cookie('accessToken', accessToken, options)
+        .cookie('refreshToken', refreshToken, options)
+        .json(
+            new apiResponse(
+                200, // this is status code
+                // this whole object is an user
+                {
+                    user: loggedInUser,
+                    accessToken,
+                    refreshToken,
+                },
+                'User Logged in successfully'
+            )
+        );
+});
+
+const logoutUser = asyncHandler(async (req, res) => {
+    
+    // First method
+    await User.findByIdAndUpdate(req.user._id, {
+        $set: {
+            refreshToken: undefined,
+        },
+        new: true,
+    });
+    
+    const options = {
+        httpOnly: true,
+        secure: true,
+    };
+    
+    res.status(200)
+    .clearCookie('accessToken', options)
+    .clearCookie('refreshToken', options)
+    .json(new apiResponse(200, {}, 'User loggedOut successfully'));
+
+    // Second Method
+    // const user = await User.findById(req.user._id);
+    // user.refreshToken = undefined;
+    // user.save({saveWithoutValidation: false})
+});
+
+export {registerUser, loginUser, logoutUser};

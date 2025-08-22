@@ -54,33 +54,47 @@ const userSchema = new Schema(
     }
 );
 
-userSchema.pre('save', async function(next){
-    if(!this.isModified(this.password)) return next();
-    this.password = await bcrypt.hash(this.password, 10);
+// userSchema.pre('save', async function (next) {
+//     if (!this.isModified(this.password)) return next();
+//     this.password = await bcrypt.hash(this.password, 10);
+//     next();
+// });
+
+userSchema.pre('save', async function (next) {
+    // Only hash the password if it has been modified (or is new)
+    if (!this.isModified('password')) return next();
+
+    this.password = await bcrypt.hash(this.password, 10); // 10 = salt rounds
     next();
 });
 
-userSchema.methods.isPasswordCorrect = async function(password){
-    return await bcrypt.compare(password, this.password);
-}
+userSchema.methods.isPasswordCorrect = async function (password) {
+    // console.log('Plain input:', password);
+    // console.log('Hashed from DB:', this.password);
+    const result = await bcrypt.compare(password, this.password);
+    // console.log('Compare result:', result);
+    return result;
+};
 
 userSchema.methods.generateAccessToken = function (next) {
-    jwt.sign(
+    return jwt.sign(
         {
             _id: this._id,
             userName: this.userName,
             fullName: this.fullName,
             email: this.email,
-        }, process.env.ACCESS_TOKEN_SECRET_KEY,
+        },
+        process.env.ACCESS_TOKEN_SECRET_KEY,
         {expiresIn: process.env.ACCESS_TOKEN_EXPIRY}
     );
 };
 
 userSchema.methods.generateRefreshToken = function () {
-    jwt.sign(
+    return jwt.sign(
         {
             _id: this._id,
         },
+        process.env.REFRESH_TOKEN_SECRET_KEY,
         {expiresIn: process.env.REFRESH_TOKEN_EXPIRY}
     );
 };
