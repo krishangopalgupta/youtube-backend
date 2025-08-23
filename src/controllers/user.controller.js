@@ -1,33 +1,33 @@
-import {asyncHandler} from '../utils/asyncHandler.js';
-import {apiError} from '../utils/apiError.js';
-import {User} from '../models/user.model.js';
-import {uploadOnCloudinary} from '../utils/cloudinary.js';
-import {apiResponse} from '../utils/apiResponse.js';
+import { asyncHandler } from '../utils/asyncHandler.js';
+import { apiError } from '../utils/apiError.js';
+import { User } from '../models/user.model.js';
+import { uploadOnCloudinary } from '../utils/cloudinary.js';
+import { apiResponse } from '../utils/apiResponse.js';
+import jwt from 'jsonwebtoken';
 
 // We will use it many times thats why we are using it as a saperate method
 const generateAccessAndRefreshToken = async (userId) => {
     const user = await User.findById(userId);
     const accessToken = user.generateAccessToken();
     const refreshToken = user.generateRefreshToken();
-    
+
     // User is your Mongoose model (something like const User = mongoose.model("User", userSchema);).
     // The result of .findOne() is a Mongoose Document (an instance of that model).
     // That user object is not just plain JSON — it’s a document object with:
     // All the fields from your schema (email, userName, password, etc.)
     // Plus any methods you defined on the schema.
-    
+
     // User.findById gives you a document (not a plain object).
     // That document inherits from the userSchema prototype.
     // Since you defined generateAccessToken on the schema’s .methods, it’s available on every document instance.
     // Inside the method, this refers to the document itself (so you can access this._id, this.email, etc.).
-    user.accessToken = accessToken;
     user.refreshToken = refreshToken;
-    
+
     // console.log(user)
     // console.log("this is user's token", user.accessToken);
     // console.log("this is user's token", user.refreshToken);
-    user.save({saveWithoutValidation: false});
-    return {accessToken, refreshToken};
+    await user.save({ saveWithoutValidation: false });
+    return { accessToken, refreshToken };
 };
 
 const registerUser = asyncHandler(async (req, res, next) => {
@@ -41,7 +41,7 @@ const registerUser = asyncHandler(async (req, res, next) => {
     // check for response creation
     // return response
 
-    const {fullName, userName, email, password} = req.body;
+    const { fullName, userName, email, password } = req.body;
 
     // validation fields
     if (
@@ -54,7 +54,7 @@ const registerUser = asyncHandler(async (req, res, next) => {
 
     //     // User Exist or not?
     const existedUser = await User.findOne({
-        $or: [{userName}, {email}],
+        $or: [{ userName }, { email }],
     });
     if (existedUser) throw new apiError(409, 'User is already Existed');
 
@@ -118,25 +118,25 @@ const loginUser = asyncHandler(async (req, res) => {
     // else
     // Throw error message
 
-    const {email, userName, password} = req.body;
+    const { email, userName, password } = req.body;
     if (!email && !userName) {
         throw new apiError(404, 'Username or email is required');
     }
 
     const user = await User.findOne({
-        $or: [{email}, {userName}],
+        $or: [{ email }, { userName }],
     });
 
     if (!user) {
         throw new apiError(404, 'user is not exist');
     }
-    
+
     const isPasswordValid = await user.isPasswordCorrect(password);
     if (!isPasswordValid) {
         throw new apiError(401, 'Invalid user Credential');
     }
 
-    const {accessToken, refreshToken} = await generateAccessAndRefreshToken(
+    const { accessToken, refreshToken } = await generateAccessAndRefreshToken(
         user._id
     );
 
@@ -144,7 +144,6 @@ const loginUser = asyncHandler(async (req, res) => {
         '-password -refreshToken'
     );
 
-    
     const options = {
         httpOnly: true,
         secure: true,
@@ -169,7 +168,6 @@ const loginUser = asyncHandler(async (req, res) => {
 });
 
 const logoutUser = asyncHandler(async (req, res) => {
-    
     // First method
     console.log('this is req from auth.controller.js', req);
     await User.findByIdAndUpdate(req.user._id, {
@@ -178,16 +176,16 @@ const logoutUser = asyncHandler(async (req, res) => {
         },
         new: true,
     });
-    
+
     const options = {
         httpOnly: true,
         secure: true,
     };
-    
+
     res.status(200)
-    .clearCookie('accessToken', options)
-    .clearCookie('refreshToken', options)
-    .json(new apiResponse(200, {}, 'User loggedOut successfully'));
+        .clearCookie('accessToken', options)
+        .clearCookie('refreshToken', options)
+        .json(new apiResponse(200, {}, 'User loggedOut successfully'));
 
     // Second Method
     // const user = await User.findById(req.user._id);
@@ -195,4 +193,57 @@ const logoutUser = asyncHandler(async (req, res) => {
     // user.save({saveWithoutValidation: false})
 });
 
-export {registerUser, loginUser, logoutUser};
+const refreshAccessToken = asyncHandler(async (req, res) => {
+    // Web browser || Mobile Apps
+    const incomingRefreshToken =
+        req.cookie?.refreshToken || req.body?.refreshToken;
+
+    if (!incomingRefreshToken) {
+        throw new apiError(
+            401,
+            'Unauthorized Request froom incoming refresh tokens'
+        );
+    }
+    try {
+        const decodedToken = jwt.verify(
+            incomingRefreshToken,
+            proces.env.REFRESH_TOKEN_SECRET_KEY
+        );
+
+        if (!decodedToken) {
+            throw new apiError(401, 'Unauthorized Token');
+        }
+
+        const user = await User.findById(decodedToken?._id);
+        if (!user) {
+            throw new apiError(401, 'Invalid Refresh Token');
+        }
+
+        if (user?.refreshToken !== incomingRefreshToken) {
+            throw new apiError(401, 'Refresh Token is expired or used');
+        }
+
+        const { newRefreshToken, accessToken } =
+            await generateAccessAndRefreshToken(user._id);
+
+        const options = {
+            httpOnly: true,
+            secure: true,
+        };
+
+        res.status(201)
+            .cookie('refreshToken', newRefreshToken, options)
+            .cookie('accessToken', accessToken, options)
+            .json(
+                new apiResponse(
+                    200,
+                    { refreshToken: newRefreshToken, accessToken },
+                    'Refreshed Token'
+                )
+            );
+    } catch (error) {
+        throw new apiError(401, error?.message, 'Invalid Refresh Token');
+    }
+});
+
+export { registerUser, loginUser, logoutUser, refreshAccessToken };

@@ -88,6 +88,8 @@ userSchema.methods.generateAccessToken = function (next) {
     );
 };
 
+
+// We can also hash the refresh for more security pupose in the below second method
 userSchema.methods.generateRefreshToken = function () {
     return jwt.sign(
         {
@@ -97,5 +99,24 @@ userSchema.methods.generateRefreshToken = function () {
         {expiresIn: process.env.REFRESH_TOKEN_EXPIRY}
     );
 };
+
+
+
+// right it doesn't work
+// userSchema.methods.generateRefreshToken = async function () {
+//   const rawRefreshToken = jwt.sign(
+//     { _id: this._id },
+//     process.env.REFRESH_TOKEN_SECRET_KEY,
+//     { expiresIn: process.env.REFRESH_TOKEN_EXPIRY }
+//   );
+
+//   // Hash refresh token with bcrypt before storing in DB
+//   const salt = await bcrypt.genSalt(10);
+//   const hashedToken = await bcrypt.hash(rawRefreshToken, salt);
+
+//   this.refreshToken = hashedToken; // store hashed
+//   return rawRefreshToken; // send raw token to client
+// };
+
 
 export const User = mongoose.model('User', userSchema);
