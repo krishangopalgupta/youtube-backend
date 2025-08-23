@@ -26,7 +26,7 @@ const generateAccessAndRefreshToken = async (userId) => {
     // console.log(user)
     // console.log("this is user's token", user.accessToken);
     // console.log("this is user's token", user.refreshToken);
-    await user.save({ saveWithoutValidation: false });
+    await user.save({ validateBeforeSave: false });
     return { accessToken, refreshToken };
 };
 
@@ -169,7 +169,8 @@ const loginUser = asyncHandler(async (req, res) => {
 
 const logoutUser = asyncHandler(async (req, res) => {
     // First method
-    console.log('this is req from auth.controller.js', req);
+
+    // console.log('this is req from auth.controller.js', req);
     await User.findByIdAndUpdate(req.user._id, {
         $set: {
             refreshToken: undefined,
@@ -207,7 +208,7 @@ const refreshAccessToken = asyncHandler(async (req, res) => {
     try {
         const decodedToken = jwt.verify(
             incomingRefreshToken,
-            proces.env.REFRESH_TOKEN_SECRET_KEY
+            process.env.REFRESH_TOKEN_SECRET_KEY
         );
 
         if (!decodedToken) {
@@ -246,4 +247,119 @@ const refreshAccessToken = asyncHandler(async (req, res) => {
     }
 });
 
-export { registerUser, loginUser, logoutUser, refreshAccessToken };
+const changeCurrentPassword = asyncHandler(async (req, res) => {
+    const { oldPassword, newPassword } = req.body;
+    console.log(req.body);
+    // Req is an object which contain multiple object such as header, cookies, body, etc.
+    // So, In our jwtverify we also inject a user in req to access it in our auth.controller.js
+    console.log(req.user);
+    const user = await User.findById(req.user?._id);
+    if (!user) {
+        throw new apiError(401, 'No User Available');
+    }
+
+    const isPasswordCorrect = await user.isPasswordCorrect(oldPassword);
+    if (!isPasswordCorrect) {
+        throw new apiError(401, 'Invalid Old Password');
+    }
+
+    user.password = newPassword;
+    await user.save({ validateBeforeSave: false });
+
+    res.status(200).json(
+        201,
+        new apiResponse({ password: newPassword }),
+        'Password Updated Successfully'
+    );
+});
+
+const getCurrentUser = asyncHandler(async (req, res) => {
+    return res.status(200).json(201, req.user, 'Current Logged In user');
+});
+
+const updateAccountDetails = asyncHandler(async (req, res) => {
+    const { fullName, email } = req.body;
+
+    if (!fullName || !email) {
+        throw new apiError(400, 'All fields are required');
+    }
+
+    const user = await User.findByIdAndUpdate(req.user?._id, {
+        $set: {
+            fullName,
+            email: email,
+        },
+        new: true,
+    }).select('-password');
+
+    res.status(200).json(201, user, 'User Account Details Successfully ');
+});
+
+const updateUserAvatar = asyncHandler(async (req, res) => {
+    // In above user registration we wrote FILES no file because in router we are uploading multiple files at a time ie. avatarImage, localImage.
+    const avatarLocalPath = req.file?.path;
+    if (!avatarLocalPath) {
+        throw new apiError(404, 'Avatar File is missing');
+    }
+
+    const avatar = await uploadOnCloudinary(avatarLocalPath);
+
+    if (!avatar) {
+        throw new apiError(404, 'Error while uploading avatar Image');
+    }
+
+    const user = await User.findByIdAndUpdate(
+        req.user?._id,
+        {
+            $set: {
+                avatarImage: response.url,
+            },
+        },
+        { new: true }
+    ).select('-password');
+
+    res.status(200).json(
+        new apiResponse(201, user, 'AvatarImage updated Successfully')
+    );
+    // user.save({ validateBeforeSave: false });
+});
+
+const updateUserCoverImage = asyncHandler(async (req, res) => {
+    const coverImageLocalPath = req.file?.path;
+    if (!coverImageLocalPath) {
+        throw new apiError(400, 'CoverImage is missing');
+    }
+
+    const coverImage = await uploadOnCloudinary(coverImageLocalPath);
+    if (!coverImage) {
+        throw new apiError(404, 'Error while uploading coverImage');
+    }
+
+    const user = await User.findByIdAndUpdate(
+        req.user?._id,
+        {
+            $set: {
+                coverImage: {
+                    coverImage: coverImage.url,
+                },
+            },
+        },
+        { new: true }
+    ).select('-password');
+
+    res.status(200).json(
+        new apiResponse(201, user, 'CoverImage updated Successfully')
+    );
+});
+
+export {
+    registerUser,
+    loginUser,
+    logoutUser,
+    refreshAccessToken,
+    changeCurrentPassword,
+    getCurrentUser,
+    updateAccountDetails,
+    updateUserAvatar,
+    updateUserCoverImage,
+};

@@ -102,7 +102,7 @@ userSchema.methods.generateRefreshToken = function () {
 
 
 
-// right it doesn't work
+// but it didn't work
 // userSchema.methods.generateRefreshToken = async function () {
 //   const rawRefreshToken = jwt.sign(
 //     { _id: this._id },
