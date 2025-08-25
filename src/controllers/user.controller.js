@@ -1,7 +1,10 @@
 import { asyncHandler } from '../utils/asyncHandler.js';
 import { apiError } from '../utils/apiError.js';
 import { User } from '../models/user.model.js';
-import { uploadOnCloudinary } from '../utils/cloudinary.js';
+import {
+    deletePreviousImageFromCloudinary,
+    uploadOnCloudinary,
+} from '../utils/cloudinary.js';
 import { apiResponse } from '../utils/apiResponse.js';
 import jwt from 'jsonwebtoken';
 
@@ -308,6 +311,9 @@ const updateUserAvatar = asyncHandler(async (req, res) => {
         throw new apiError(404, 'Error while uploading avatar Image');
     }
 
+    const previousUserAvatar = await User.findById(req.user?._id);
+    const holdImageUrlForPrevImageDeletion = previousUserAvatar.avatarImage;
+
     const user = await User.findByIdAndUpdate(
         req.user?._id,
         {
@@ -318,6 +324,16 @@ const updateUserAvatar = asyncHandler(async (req, res) => {
         { new: true }
     ).select('-password');
 
+    // Delete From cloudinary
+    // my avatar url will be in the form of this where trv... will be my public_id so we need that "http://res.cloudinary.com/dhuvk3fjc/image/upload/v1755880166/trvzeohwu4jk9hgd5td3.jpg"
+    const avatarImageUrlArray = holdImageUrlForPrevImageDeletion.split('/');
+    const avatarImageUrlWithExt =
+        avatarImageUrlArray[avatarImageUrlArray.size - 1]; //wiil got this trvzeohwu4jk9hgd5td3.jpg
+    const public_id = avatarImageUrlWithExt.split('.')[0];
+    await deletePreviousImageFromCloudinary(public_id);
+
+    const splitUrl = imageUrl.split('/');
+    console.log(splitUrl);
     res.status(200).json(
         new apiResponse(201, user, 'AvatarImage updated Successfully')
     );
@@ -352,6 +368,78 @@ const updateUserCoverImage = asyncHandler(async (req, res) => {
     );
 });
 
+const getUserChannelProfile = asyncHandler(async (req, res) => {
+    console.log(req.params);
+    const { userName } = req.params;
+    if (!userName) {
+        throw new apiError(400, 'UserName is missing');
+    }
+
+    const channel = await User.find([
+        {
+            $match: {
+                userName: userName?.toLowerCase(),
+            },
+        },
+        {
+            $lookup: {
+                from: 'subscriptions',
+                localField: '_id',
+                foreignField: 'channel', // this is from database
+                as: 'subscribers',
+            },
+            // returns the number of documents
+        },
+        {
+            $lookup: {
+                from: 'subscriptions',
+                localField: '_id',
+                foreignField: 'subscriber', // this is from database
+                as: 'ChannelSubscribedToCount',
+            },
+        },
+        {
+            $addFields: {
+                subscriberCount: {
+                    $size: '$subscribers', // count the no. of documents
+                },
+                channelSubscriberedToCount: {
+                    $size: '$channel',
+                },
+                isSubscribed: {
+                    $cond: {
+                        if: { $in: [req.user?._id, '$subscribers.subscriber'] },
+                        then: true,
+                        else: false,
+                    },
+                },
+            },
+        },
+        {
+            $proj: {
+                fullName: 1,
+                userName: 1,
+                subscribers: 1,
+                ChannelSubscribedToCount: 1,
+                subscriberCount: 1,
+                avatarImage: 1,
+                coverImage: 1,
+            },
+        },
+    ]);
+
+    console.log(channel);
+    if (!channel?.length) {
+        throw new apiError(404, "channel doesn't exist");
+    }
+
+    return res
+        .status(200)
+        .json(
+            new apiResponse(201, channel, 'User Channel Fetched Successfully')
+        );
+});
+
 export {
     registerUser,
     loginUser,
@@ -362,4 +450,5 @@ export {
     updateAccountDetails,
     updateUserAvatar,
     updateUserCoverImage,
+    getUserChannelProfile,
 };

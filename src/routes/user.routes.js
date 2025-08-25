@@ -29,5 +29,5 @@ router.route('/login').post(loginUser);
 // Secure routes
 router.route('/logout').post(JWTVerify, logoutUser);
 router.route('/refresh-token').post(refreshAccessToken);
-router.route('/update-password').post(changeCurrentPassword);
+router.route('/update-password').post(JWTVerify, changeCurrentPassword);
 export default router;

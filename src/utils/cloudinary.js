@@ -1,5 +1,7 @@
 import {v2 as cloudinary} from 'cloudinary';
 import fs from 'fs';
+import { apiError } from './apiError';
+import { apiResponse } from './apiResponse';
 const envVariable = process.env;
 
 // Creating a function for taking file from user and wrap it in a try catch block using asyncHandler.js
@@ -21,6 +23,18 @@ const uploadOnCloudinary = async (localFilePath) => {
     }
 };
 
+
+const deletePreviousImageFromCloudinary = async(localFilePath) =>{
+    try {
+        const result = cloudinary.uploader.destroy(localFilePath);
+        if(result !== "ok"){
+            throw new apiError(500, "File Not deleted");
+        }
+        res.status(200).json(new apiResponse(201, "", "Deleted successfully"))
+    } catch (error) {
+        throw new apiError(500, "File Not deleted");
+    }
+}
 // Configuration of Cloudinary
 cloudinary.config({
     cloud_name: envVariable.CLOUD_NAME,
@@ -28,4 +42,4 @@ cloudinary.config({
     api_secret: envVariable.API_SECRET,
 });
 
-export {uploadOnCloudinary};
+export {uploadOnCloudinary, deletePreviousImageFromCloudinary};
