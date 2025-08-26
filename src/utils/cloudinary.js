@@ -1,7 +1,7 @@
 import {v2 as cloudinary} from 'cloudinary';
 import fs from 'fs';
-import { apiError } from './apiError';
-import { apiResponse } from './apiResponse';
+import { apiError } from './apiError.js';
+import { apiResponse } from './apiResponse.js';
 const envVariable = process.env;
 
 // Creating a function for taking file from user and wrap it in a try catch block using asyncHandler.js

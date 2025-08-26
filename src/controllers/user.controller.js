@@ -371,7 +371,7 @@ const updateUserCoverImage = asyncHandler(async (req, res) => {
 const getUserChannelProfile = asyncHandler(async (req, res) => {
     console.log(req.params);
     const { userName } = req.params;
-    if (!userName) {
+    if (!userName?.trim()) {
         throw new apiError(400, 'UserName is missing');
     }
 
@@ -440,6 +440,59 @@ const getUserChannelProfile = asyncHandler(async (req, res) => {
         );
 });
 
+const getUserWatchHistory = asyncHandler(async (req, res) => {
+    const user = await User.aggregate([
+        {
+            $match: {
+                id: new mongoose.Types.ObjectId(req.user?._id),
+            },
+        },
+        {
+            $lookup: {
+                from: 'videos',
+                localField: 'watchHistory',
+                foreignField: '_id',
+                as: 'watchHistory',
+                project: [
+                    {
+                        $lookup: {
+                            from: 'users',
+                            localField: 'owner',
+                            foreignField: '_id',
+                            as: 'owner',
+                        },
+                        pipeline: [
+                            {
+                                $project: {
+                                    fullName: 1,
+                                    email: 1,
+                                    userName: 1,
+                                    avatar: 1,
+                                },
+                            },
+                            {
+                                $addFields: {
+                                    owner: {
+                                        $first: '$owner',
+                                    },
+                                },
+                            },
+                        ],
+                    },
+                ],
+            },
+        },
+    ]);
+    return res
+        .status(200)
+        .json(
+            new apiResponse(
+                201,
+                user[0].watchHistory,
+                'watch history fetched successfully'
+            )
+        );
+});
 export {
     registerUser,
     loginUser,
@@ -451,4 +504,5 @@ export {
     updateUserAvatar,
     updateUserCoverImage,
     getUserChannelProfile,
+    getUserWatchHistory,
 };

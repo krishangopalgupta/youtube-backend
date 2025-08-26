@@ -1,10 +1,15 @@
 import { Router } from 'express';
 import {
     changeCurrentPassword,
+    getCurrentUser,
+    getUserChannelProfile,
     loginUser,
     logoutUser,
     refreshAccessToken,
     registerUser,
+    updateAccountDetails,
+    updateUserAvatar,
+    updateUserCoverImage,
 } from '../controllers/user.controller.js';
 import { upload } from '../middlewares/multer.middleware.js';
 import { JWTVerify } from '../middlewares/auth.controller.js';
@@ -30,4 +35,16 @@ router.route('/login').post(loginUser);
 router.route('/logout').post(JWTVerify, logoutUser);
 router.route('/refresh-token').post(refreshAccessToken);
 router.route('/update-password').post(JWTVerify, changeCurrentPassword);
+router.route('/current-user').get(JWTVerify, getCurrentUser);
+router
+    .route('/avatar')
+    .patch(JWTVerify, upload.single('avatarImage'), updateUserAvatar);
+router
+    .route('/coverImage')
+    .patch(JWTVerify, upload.single('coverImage'), updateUserCoverImage);
+
+// because we're using req.params
+router.route('/c/:username').get(JWTVerify, getUserChannelProfile);
+router.route('/update-account-details').patch(JWTVerify, updateAccountDetails);
+
 export default router;
