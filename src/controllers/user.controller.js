@@ -173,10 +173,12 @@ const loginUser = asyncHandler(async (req, res) => {
 const logoutUser = asyncHandler(async (req, res) => {
     // First method
 
-    // console.log('this is req from auth.controller.js', req);
     await User.findByIdAndUpdate(req.user._id, {
-        $set: {
-            refreshToken: undefined,
+        // $set: {
+        //     refreshToken: undefined,
+        // },
+        $unset: {
+            refreshToken: 1, // remove the field from the documents by doing flag 1;
         },
         new: true,
     });
@@ -252,9 +254,10 @@ const refreshAccessToken = asyncHandler(async (req, res) => {
 
 const changeCurrentPassword = asyncHandler(async (req, res) => {
     const { oldPassword, newPassword } = req.body;
-    console.log(req.body);
+    // console.log(req.body);
     // Req is an object which contain multiple object such as header, cookies, body, etc.
     // So, In our jwtverify we also inject a user in req to access it in our auth.controller.js
+
     console.log(req.user);
     const user = await User.findById(req.user?._id);
     if (!user) {
@@ -269,15 +272,23 @@ const changeCurrentPassword = asyncHandler(async (req, res) => {
     user.password = newPassword;
     await user.save({ validateBeforeSave: false });
 
-    res.status(200).json(
-        201,
-        new apiResponse({ password: newPassword }),
-        'Password Updated Successfully'
-    );
+    console.log(user);
+    return res
+        .status(200)
+        .json(
+            new apiResponse(
+                201,
+                { password: newPassword },
+                'Password Updated Successfully'
+            )
+        );
 });
 
 const getCurrentUser = asyncHandler(async (req, res) => {
-    return res.status(200).json(201, req.user, 'Current Logged In user');
+    // console.log(req.user);
+    return res
+        .status(200)
+        .json(new apiResponse(200, req.user, 'Current Logged In user'));
 });
 
 const updateAccountDetails = asyncHandler(async (req, res) => {
@@ -300,6 +311,8 @@ const updateAccountDetails = asyncHandler(async (req, res) => {
 
 const updateUserAvatar = asyncHandler(async (req, res) => {
     // In above user registration we wrote FILES no file because in router we are uploading multiple files at a time ie. avatarImage, localImage.
+    console.log('hello world')
+    console.log(req.file);
     const avatarLocalPath = req.file?.path;
     if (!avatarLocalPath) {
         throw new apiError(404, 'Avatar File is missing');
@@ -318,7 +331,7 @@ const updateUserAvatar = asyncHandler(async (req, res) => {
         req.user?._id,
         {
             $set: {
-                avatarImage: response.url,
+                avatarImage: avatar.url,
             },
         },
         { new: true }
@@ -328,12 +341,10 @@ const updateUserAvatar = asyncHandler(async (req, res) => {
     // my avatar url will be in the form of this where trv... will be my public_id so we need that "http://res.cloudinary.com/dhuvk3fjc/image/upload/v1755880166/trvzeohwu4jk9hgd5td3.jpg"
     const avatarImageUrlArray = holdImageUrlForPrevImageDeletion.split('/');
     const avatarImageUrlWithExt =
-        avatarImageUrlArray[avatarImageUrlArray.size - 1]; //wiil got this trvzeohwu4jk9hgd5td3.jpg
+        avatarImageUrlArray[avatarImageUrlArray.length - 1]; //wiil got this trvzeohwu4jk9hgd5td3.jpg
     const public_id = avatarImageUrlWithExt.split('.')[0];
     await deletePreviousImageFromCloudinary(public_id);
 
-    const splitUrl = imageUrl.split('/');
-    console.log(splitUrl);
     res.status(200).json(
         new apiResponse(201, user, 'AvatarImage updated Successfully')
     );

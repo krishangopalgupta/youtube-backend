@@ -20,7 +20,7 @@ export const JWTVerify = asyncHandler(async (req, _, next) => {
             process.env.ACCESS_TOKEN_SECRET_KEY
         );
 
-        // console.log('decoded token', decodedToken);
+        console.log('decoded token', decodedToken);
         const user = await User.findById(decodedToken?._id).select(
             '-password -refreshToken'
         );

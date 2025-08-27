@@ -34,8 +34,8 @@ router.route('/login').post(loginUser);
 // Secure routes
 router.route('/logout').post(JWTVerify, logoutUser);
 router.route('/refresh-token').post(refreshAccessToken);
-router.route('/update-password').post(JWTVerify, changeCurrentPassword);
-router.route('/current-user').get(JWTVerify, getCurrentUser);
+//router.route('/update-password').post(JWTVerify, changeCurrentPassword);
+// router.route('/current-user').get(JWTVerify, getCurrentUser);
 router
     .route('/avatar')
     .patch(JWTVerify, upload.single('avatarImage'), updateUserAvatar);
