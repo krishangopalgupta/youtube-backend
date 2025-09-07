@@ -34,7 +34,7 @@ router.route('/login').post(loginUser);
 // Secure routes
 router.route('/logout').post(JWTVerify, logoutUser);
 router.route('/refresh-token').post(refreshAccessToken);
-//router.route('/update-password').post(JWTVerify, changeCurrentPassword);
+router.route('/update-password').post(JWTVerify, changeCurrentPassword);
 // router.route('/current-user').get(JWTVerify, getCurrentUser);
 router
     .route('/avatar')
@@ -43,6 +43,7 @@ router
     .route('/coverImage')
     .patch(JWTVerify, upload.single('coverImage'), updateUserCoverImage);
 
+router.route('/current-user').get(JWTVerify, getCurrentUser)
 // because we're using req.params
 router.route('/c/:username').get(JWTVerify, getUserChannelProfile);
 router.route('/update-account-details').patch(JWTVerify, updateAccountDetails);

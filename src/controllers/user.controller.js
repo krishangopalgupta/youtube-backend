@@ -45,7 +45,6 @@ const registerUser = asyncHandler(async (req, res, next) => {
     // return response
 
     const { fullName, userName, email, password } = req.body;
-
     // validation fields
     if (
         [userName, fullName, email, password].some(
@@ -55,14 +54,14 @@ const registerUser = asyncHandler(async (req, res, next) => {
         throw new apiError(400, 'All fields are Mandatory');
     }
 
-    //     // User Exist or not?
+    //   User Exist or not?
     const existedUser = await User.findOne({
         $or: [{ userName }, { email }],
     });
     if (existedUser) throw new apiError(409, 'User is already Existed');
 
-    // console.log(existedUser);
     // console.log(`req.files, ${req.files}`);
+    // console.log(req.files);
     // console.log(`req.files?.avatar, ${req.files?.avatarImage}, ${Array.isArray(req.files.avatarImage)}`);
     // console.log(`req.files?.avatar[0], ${req.files?.avatar[0]}`);
 
@@ -77,14 +76,12 @@ const registerUser = asyncHandler(async (req, res, next) => {
     ) {
         coverImageLocalPath = req.files?.coverImage[0]?.path;
     }
-    // console.log('Files =>', req.files);
-    // console.log('Body =>', req.body);
+
     if (!avatarLocalPath) throw new apiError(400, 'Avatar file is required');
 
     const avatar = await uploadOnCloudinary(avatarLocalPath);
     const coverImage = await uploadOnCloudinary(coverImageLocalPath);
 
-    // console.log(avatar);
     if (!avatar) throw new apiError(400, 'Avatar file is required');
 
     const user = await User.create({
@@ -254,9 +251,6 @@ const refreshAccessToken = asyncHandler(async (req, res) => {
 
 const changeCurrentPassword = asyncHandler(async (req, res) => {
     const { oldPassword, newPassword } = req.body;
-    // console.log(req.body);
-    // Req is an object which contain multiple object such as header, cookies, body, etc.
-    // So, In our jwtverify we also inject a user in req to access it in our auth.controller.js
 
     console.log(req.user);
     const user = await User.findById(req.user?._id);
@@ -272,7 +266,15 @@ const changeCurrentPassword = asyncHandler(async (req, res) => {
     user.password = newPassword;
     await user.save({ validateBeforeSave: false });
 
-    console.log(user);
+    //     This only runs when you call user.save().
+    // 👉 It does not run when you use findByIdAndUpdate, because that’s a direct MongoDB update query.
+    // await User.findByIdAndUpdate(user?._id, {
+    //     $set: {
+    //         password: newPassword,
+    //     },
+    //     new: true,
+    // });
+
     return res
         .status(200)
         .json(
@@ -285,10 +287,15 @@ const changeCurrentPassword = asyncHandler(async (req, res) => {
 });
 
 const getCurrentUser = asyncHandler(async (req, res) => {
-    // console.log(req.user);
     return res
         .status(200)
-        .json(new apiResponse(200, req.user, 'Current Logged In user'));
+        .json(
+            new apiResponse(
+                200,
+                req.user,
+                'Current Logged In user'
+            )
+        );
 });
 
 const updateAccountDetails = asyncHandler(async (req, res) => {
@@ -311,44 +318,39 @@ const updateAccountDetails = asyncHandler(async (req, res) => {
 
 const updateUserAvatar = asyncHandler(async (req, res) => {
     // In above user registration we wrote FILES no file because in router we are uploading multiple files at a time ie. avatarImage, localImage.
-    console.log('hello world')
-    console.log(req.file);
+    // console.log(req.file);
+
     const avatarLocalPath = req.file?.path;
     if (!avatarLocalPath) {
         throw new apiError(404, 'Avatar File is missing');
     }
-
     const avatar = await uploadOnCloudinary(avatarLocalPath);
-
     if (!avatar) {
-        throw new apiError(404, 'Error while uploading avatar Image');
+        throw new apiError(404, 'Error While Uploading avatarImage');
     }
 
-    const previousUserAvatar = await User.findById(req.user?._id);
-    const holdImageUrlForPrevImageDeletion = previousUserAvatar.avatarImage;
+    const previousUser = await User.findById(req.user?._id);
+    const previousAvatarUrl = previousUser.avatarImage;
+    const previousAvatarUrlArray = previousAvatarUrl.split('/');
+    const previousAvatarUrlArrayWithExt =
+        previousAvatarUrlArray[previousAvatarUrlArray.length - 1];
+    const publicId = previousAvatarUrlArrayWithExt.split('.')[0];
 
-    const user = await User.findByIdAndUpdate(
-        req.user?._id,
-        {
-            $set: {
-                avatarImage: avatar.url,
-            },
+    const user = await User.findByIdAndUpdate(req.user?._id, {
+        $set: {
+            avatarImage: avatar.url,
         },
-        { new: true }
-    ).select('-password');
+        new: true,
+    }).select('-password');
 
-    // Delete From cloudinary
-    // my avatar url will be in the form of this where trv... will be my public_id so we need that "http://res.cloudinary.com/dhuvk3fjc/image/upload/v1755880166/trvzeohwu4jk9hgd5td3.jpg"
-    const avatarImageUrlArray = holdImageUrlForPrevImageDeletion.split('/');
-    const avatarImageUrlWithExt =
-        avatarImageUrlArray[avatarImageUrlArray.length - 1]; //wiil got this trvzeohwu4jk9hgd5td3.jpg
-    const public_id = avatarImageUrlWithExt.split('.')[0];
-    await deletePreviousImageFromCloudinary(public_id);
+    if (!user) {
+        throw new apiError(404, "User doesn't exist");
+    }
 
+    await deletePreviousImageFromCloudinary(publicId);
     res.status(200).json(
-        new apiResponse(201, user, 'AvatarImage updated Successfully')
+        new apiResponse(201, user, 'AvatarIamge Updated Successfully')
     );
-    // user.save({ validateBeforeSave: false });
 });
 
 const updateUserCoverImage = asyncHandler(async (req, res) => {

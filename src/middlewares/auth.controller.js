@@ -20,7 +20,7 @@ export const JWTVerify = asyncHandler(async (req, _, next) => {
             process.env.ACCESS_TOKEN_SECRET_KEY
         );
 
-        console.log('decoded token', decodedToken);
+        // console.log('decoded token', decodedToken);
         const user = await User.findById(decodedToken?._id).select(
             '-password -refreshToken'
         );
@@ -28,7 +28,7 @@ export const JWTVerify = asyncHandler(async (req, _, next) => {
             throw new apiError(401, 'Invalid Access token');
         }
         req.user = user;
-        console.log(req.user);
+        // console.log(req.user);
         next();
     } catch (error) {
         throw new apiError(401, 'Invalid Access Token');

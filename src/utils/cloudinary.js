@@ -1,4 +1,4 @@
-import {v2 as cloudinary} from 'cloudinary';
+import { v2 as cloudinary } from 'cloudinary';
 import fs from 'fs';
 import { apiError } from './apiError.js';
 import { apiResponse } from './apiResponse.js';
@@ -23,18 +23,40 @@ const uploadOnCloudinary = async (localFilePath) => {
     }
 };
 
-
-const deletePreviousImageFromCloudinary = async(localFilePath) =>{
+const deletePreviousImageFromCloudinary = async (public_id) => {
     try {
-        const result = cloudinary.uploader.destroy(localFilePath);
-        if(result !== "ok"){
-            throw new apiError(500, "File Not deleted");
+        // console.log(public_id);
+        // i have destructured it below is the different method
+        const { result } = await cloudinary.uploader.destroy(public_id);
+        // console.log('result', result);
+        if (result !== 'ok') {
+            throw new apiError(500, 'File Not deleted');
         }
-        res.status(200).json(new apiResponse(201, "", "Deleted successfully"))
+        return result;
     } catch (error) {
-        throw new apiError(500, "File Not deleted");
+        throw new apiError(500, 'File Not deleted');
     }
-}
+};
+
+// const deletePreviousImageFromCloudinary = async (public_id) => {
+//     try {
+//         console.log("Deleting from Cloudinary:", public_id);
+
+//         const response = await cloudinary.uploader.destroy(public_id);
+
+//         console.log("Cloudinary response:", response);
+
+//         if (response.result !== "ok") {
+//             throw new apiError(500, `File not deleted (reason: ${result.result})`);
+//         }
+
+//         return response;
+//     } catch (error) {
+//         console.error("Cloudinary delete error:", error);
+//         throw new apiError(500, "File Not deleted");
+//     }
+// };
+
 // Configuration of Cloudinary
 cloudinary.config({
     cloud_name: envVariable.CLOUD_NAME,
@@ -42,4 +64,4 @@ cloudinary.config({
     api_secret: envVariable.API_SECRET,
 });
 
-export {uploadOnCloudinary, deletePreviousImageFromCloudinary};
+export { uploadOnCloudinary, deletePreviousImageFromCloudinary };
