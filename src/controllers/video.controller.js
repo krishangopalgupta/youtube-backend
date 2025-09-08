@@ -1,6 +1,5 @@
 import mongoose, { isValidObjectId } from 'mongoose';
 import { Video } from '../models/video.model.js';
-import { User } from '../models/user.model.js';
 import { apiError } from '../utils/apiError.js';
 import { apiResponse } from '../utils/apiResponse.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
@@ -164,7 +163,7 @@ const togglePublishStatus = asyncHandler(async (req, res) => {
     if (req.user?._id.toString() !== video.owner?.toString()) {
         throw new apiError(409, 'You are not authorized to delete this video');
     }
-    
+
     video.isPublished = !video.isPublished;
     await video.save({ validateBeforeSave: false });
 
