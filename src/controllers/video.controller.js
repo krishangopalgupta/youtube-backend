@@ -23,9 +23,10 @@ const getAllVideos = asyncHandler(async (req, res) => {
 
 const publishAVideo = asyncHandler(async (req, res) => {
     const { title, description } = req.body;
-    console.log('req.files------>', req.files);
+    // console.log('req.files------>', req.files);
     // TODO: get video, upload to cloudinary, create video
-    const videoFilePath = req.files?.videoFile[0].path;
+    const videoFilePath = req.files?.videoFile?.[0]?.path;
+    // console.log("videoFilePath", videoFilePath)
     if (!videoFilePath) {
         throw new apiError(404, 'Unable to find path of the video');
     }

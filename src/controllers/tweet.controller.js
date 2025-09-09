@@ -92,10 +92,12 @@ const getAllTweet = asyncHandler(async (req, res) => {
     const tweet = await Tweet.find();
 
     res.status(200).json(
-        new apiResponse(200, {tweet, totalTweets: tweet.length}, 'All Tweet fetched successfully')
+        new apiResponse(
+            200,
+            { tweet, totalTweets: tweet.length },
+            'All Tweet fetched successfully'
+        )
     );
-
-
 });
 
 export { createTweet, updateTweet, deleteTweet, getAllTweet };
