@@ -28,6 +28,7 @@ import videoRouter from './routes/video.routes.js';
 import tweetRouter from './routes/tweet.routes.js';
 import likeRouter from './routes/like.routes.js';
 import commentRouter from './routes/comment.routes.js';
+import dashboardRouter from './routes/dashboard.routes.js';
 
 // Router declaration
 app.use('/api/v1/users', userRouter);
@@ -36,6 +37,7 @@ app.use('/api/v1/users', videoRouter);
 app.use('/api/v1/users', tweetRouter);
 app.use('/api/v1/users', likeRouter);
 app.use('/api/v1/users', commentRouter);
+app.use('/api/v1/users', dashboardRouter);
 
 
 export { app };

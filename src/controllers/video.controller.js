@@ -182,7 +182,7 @@ const togglePublishStatus = asyncHandler(async (req, res) => {
 const updateViews = asyncHandler(async (req, res) => {
     const { videoId } = req.params;
     const videoDoc = await Video.findByIdAndUpdate(
-        _id,
+        videoId,
         {
             $inc: {
                 views: 1,
@@ -196,6 +196,23 @@ const updateViews = asyncHandler(async (req, res) => {
     res.status(200).json(new apiResponse(200, videoDoc, 'fetched'));
 });
 
+
+const getIndividualChannelVideos = asyncHandler(async (req, res) => {
+    // TODO: Get the channel stats like total video views, total subscribers, total videos, total likes etc.
+    const videos = await Video.find({ owner: req.user?._id }).populate(
+        'owner',
+        'userName'
+    );
+    res.status(200).json(
+        new apiResponse(
+            200,
+            { videos: videos.map((v) => v._id), totalVideos: videos.length },
+            'Total Number of Videos Uploaded by an individual User'
+        )
+    );
+});
+
+
 export {
     getAllVideos,
     publishAVideo,
@@ -204,4 +221,5 @@ export {
     deleteVideo,
     togglePublishStatus,
     updateViews,
+    getIndividualChannelVideos
 };

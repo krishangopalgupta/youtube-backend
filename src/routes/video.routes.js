@@ -7,6 +7,7 @@ import {
     togglePublishStatus,
     updateVideo,
     updateViews,
+    getIndividualChannelVideos
 } from '../controllers/video.controller.js';
 import { JWTVerify } from '../middlewares/auth.controller.js';
 import { upload } from '../middlewares/multer.middleware.js';
@@ -37,5 +38,6 @@ router
     .route('/update-video/:videoId')
     .post(upload.single('thumbnail'), updateVideo);
 router.route('/delete-video/:videoId').get(deleteVideo);
-router.route('/toggle-publish-status/:videoId').get(togglePublishStatus)
+router.route('/toggle-publish-status/:videoId').get(togglePublishStatus);
+router.route('/individual-channels-video').get(getIndividualChannelVideos);
 export default router;
